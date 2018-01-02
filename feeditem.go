@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 )
 
@@ -44,7 +45,7 @@ func getFeed(w http.ResponseWriter, r *http.Request) {
 		ORDER BY posts.created_at DESC
 	`, authUserID)
 	if err != nil {
-		respondError(w, err)
+		respondError(w, fmt.Errorf("could not query feed: %v", err))
 		return
 	}
 	defer rows.Close()
@@ -68,7 +69,7 @@ func getFeed(w http.ResponseWriter, r *http.Request) {
 			&post.Liked,
 			&post.Subscribed,
 		); err != nil {
-			respondError(w, err)
+			respondError(w, fmt.Errorf("could not scan feed item: %v", err))
 			return
 		}
 		post.User = &user
@@ -76,7 +77,7 @@ func getFeed(w http.ResponseWriter, r *http.Request) {
 		feed = append(feed, feedItem)
 	}
 	if err = rows.Err(); err != nil {
-		respondError(w, err)
+		respondError(w, fmt.Errorf("could not iterate over feed: %v", err))
 		return
 	}
 	// Respond with feed array

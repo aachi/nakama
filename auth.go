@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -66,7 +67,7 @@ func login(w http.ResponseWriter, r *http.Request) {
 			http.StatusNotFound)
 		return
 	} else if err != nil {
-		respondError(w, err)
+		respondError(w, fmt.Errorf("could not query user to login: %v", err))
 		return
 	}
 	// Isuue a JWT
@@ -76,7 +77,7 @@ func login(w http.ResponseWriter, r *http.Request) {
 		ExpiresAt: expiresAt.Unix(),
 	}).SignedString(jwtKey)
 	if err != nil {
-		respondError(w, err)
+		respondError(w, fmt.Errorf("could not generate JWT: %v", err))
 		return
 	}
 	// Respond with the JWT
@@ -159,7 +160,7 @@ func mustAuthUser(next http.Handler) http.Handler {
 				http.StatusTeapot)
 			return
 		} else if err != nil {
-			respondError(w, err)
+			respondError(w, fmt.Errorf("could not query authenticated user: %v", err))
 			return
 		}
 		authUser.ID = authUserID

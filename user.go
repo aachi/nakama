@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -78,7 +79,7 @@ func createUser(w http.ResponseWriter, r *http.Request) {
 		}, http.StatusUnprocessableEntity)
 		return
 	} else if err != nil {
-		respondError(w, err)
+		respondError(w, fmt.Errorf("could not create user: %v", err))
 		return
 	}
 	user.Email = email
@@ -132,7 +133,7 @@ func getUsers(w http.ResponseWriter, r *http.Request) {
 	// Fetch users
 	rows, err := db.QueryContext(ctx, query, args...)
 	if err != nil {
-		respondError(w, err)
+		respondError(w, fmt.Errorf("could not query users: %v", err))
 		return
 	}
 	defer rows.Close()
@@ -154,13 +155,13 @@ func getUsers(w http.ResponseWriter, r *http.Request) {
 			)
 		}
 		if err = rows.Scan(dest...); err != nil {
-			respondError(w, err)
+			respondError(w, fmt.Errorf("could not scan user: %v", err))
 			return
 		}
 		users = append(users, user)
 	}
 	if err = rows.Err(); err != nil {
-		respondError(w, err)
+		respondError(w, fmt.Errorf("could not iterate over users: %v", err))
 		return
 	}
 	// Respond with users array
@@ -220,7 +221,7 @@ func getUser(w http.ResponseWriter, r *http.Request) {
 			http.StatusNotFound)
 		return
 	} else if err != nil {
-		respondError(w, err)
+		respondError(w, fmt.Errorf("could not get user: %v", err))
 		return
 	}
 
@@ -313,7 +314,7 @@ func toggleFollow(w http.ResponseWriter, r *http.Request) {
 			http.StatusForbidden)
 		return
 	} else if err != nil {
-		respondError(w, err)
+		respondError(w, fmt.Errorf("could not toggle follow: %v", err))
 		return
 	}
 

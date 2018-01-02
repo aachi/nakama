@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -44,8 +45,7 @@ func createComment(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	content := input.Content
 	// TODO: validate input
-	// Store comment
-	// Increment post's comments_count
+	// Store comment and increment post's comments_count
 	ctx := r.Context()
 	authUser := ctx.Value(keyAuthUser).(User)
 	postID := chi.URLParam(r, "post_id")
@@ -64,7 +64,7 @@ func createComment(w http.ResponseWriter, r *http.Request) {
 		`, postID)
 		return err
 	}); err != nil {
-		respondError(w, err)
+		respondError(w, fmt.Errorf("could not create comment: %v", err))
 		return
 	}
 	comment.Content = content
@@ -110,7 +110,7 @@ func getComments(w http.ResponseWriter, r *http.Request) {
 		ORDER BY comments.created_at DESC`
 	rows, err := db.QueryContext(ctx, query, args...)
 	if err != nil {
-		respondError(w, err)
+		respondError(w, fmt.Errorf("could not query comments: %v", err))
 		return
 	}
 	defer rows.Close()
@@ -134,14 +134,14 @@ func getComments(w http.ResponseWriter, r *http.Request) {
 			)
 		}
 		if err = rows.Scan(dest...); err != nil {
-			respondError(w, err)
+			respondError(w, fmt.Errorf("could not scan comment: %v", err))
 			return
 		}
 		comment.User = user
 		comments = append(comments, comment)
 	}
 	if err = rows.Err(); err != nil {
-		respondError(w, err)
+		respondError(w, fmt.Errorf("could not iterate over comments: %v", err))
 		return
 	}
 	// Respond with array of comments
@@ -190,7 +190,7 @@ func toggleCommentLike(w http.ResponseWriter, r *http.Request) {
 			RETURNING likes_count
 		`, commentID).Scan(&likesCount)
 	}); err != nil {
-		respondError(w, err)
+		respondError(w, fmt.Errorf("could not toggle comment like: %v", err))
 		return
 	}
 	liked = !liked

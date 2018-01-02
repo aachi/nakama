@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -71,7 +72,7 @@ func createPost(w http.ResponseWriter, r *http.Request) {
 			RETURNING id
 		`, authUser.ID, post.ID).Scan(&feedItem.ID)
 	}); err != nil {
-		respondError(w, err)
+		respondError(w, fmt.Errorf("could not create post: %v", err))
 		return
 	}
 	post.Content = content
@@ -156,7 +157,7 @@ func getPosts(w http.ResponseWriter, r *http.Request) {
 	// Fetch posts
 	rows, err := db.QueryContext(ctx, query, args...)
 	if err != nil {
-		respondError(w, err)
+		respondError(w, fmt.Errorf("could not query posts: %v", err))
 		return
 	}
 	defer rows.Close()
@@ -180,13 +181,13 @@ func getPosts(w http.ResponseWriter, r *http.Request) {
 			)
 		}
 		if err = rows.Scan(dest...); err != nil {
-			respondError(w, err)
+			respondError(w, fmt.Errorf("could not scan post: %v", err))
 			return
 		}
 		posts = append(posts, post)
 	}
 	if err = rows.Err(); err != nil {
-		respondError(w, err)
+		respondError(w, fmt.Errorf("could not iterate over posts: %v", err))
 		return
 	}
 	// Respond with array of posts
@@ -250,7 +251,7 @@ func getPost(w http.ResponseWriter, r *http.Request) {
 			http.StatusNotFound)
 		return
 	} else if err != nil {
-		respondError(w, err)
+		respondError(w, fmt.Errorf("could not get post: %v", err))
 		return
 	}
 	post.ID = postID
@@ -301,7 +302,7 @@ func togglePostLike(w http.ResponseWriter, r *http.Request) {
 			RETURNING likes_count
 		`, postID).Scan(&likesCount)
 	}); err != nil {
-		respondError(w, err)
+		respondError(w, fmt.Errorf("could not toggle post like: %v", err))
 		return
 	}
 	liked = !liked
