@@ -82,11 +82,10 @@ func login(w http.ResponseWriter, r *http.Request) {
 	}
 	// Respond with the JWT
 	http.SetCookie(w, &http.Cookie{
-		Name:     "jwt",
-		Value:    tokenString,
-		Path:     "/",
-		Expires:  expiresAt,
-		HttpOnly: true,
+		Name:    "jwt",
+		Value:   tokenString,
+		Path:    "/",
+		Expires: expiresAt,
 		// Secure:   true,
 	})
 	respondJSON(w, LoginPayload{user, tokenString, expiresAt}, http.StatusOK)
