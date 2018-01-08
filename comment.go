@@ -36,19 +36,20 @@ type ToggleCommentLikePayload struct {
 }
 
 func createComment(w http.ResponseWriter, r *http.Request) {
-	// Decode JSON body
 	var input CreateCommentInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	defer r.Body.Close()
+
 	content := input.Content
 	// TODO: validate input
-	// Store comment and increment post's comments_count
+
 	ctx := r.Context()
 	authUser := ctx.Value(keyAuthUser).(User)
 	postID := chi.URLParam(r, "post_id")
+
 	var comment Comment
 	if err := crdb.ExecuteTx(ctx, db, nil, func(tx *sql.Tx) error {
 		if err := tx.QueryRow(`
@@ -57,6 +58,15 @@ func createComment(w http.ResponseWriter, r *http.Request) {
 		`, content, authUser.ID, postID).Scan(&comment.ID, &comment.CreatedAt); err != nil {
 			return err
 		}
+
+		if _, err := tx.Exec(`
+			INSERT INTO subscriptions (user_id, post_id) VALUES ($1, $2)
+			ON CONFLICT (user_id, post_id) DO NOTHING
+			RETURNING NOTHING
+		`, authUser.ID, postID); err != nil {
+			return err
+		}
+
 		_, err := tx.Exec(`
 			UPDATE posts SET comments_count = comments_count + 1
 			WHERE id = $1
@@ -67,13 +77,15 @@ func createComment(w http.ResponseWriter, r *http.Request) {
 		respondError(w, fmt.Errorf("could not create comment: %v", err))
 		return
 	}
+
 	comment.Content = content
 	comment.UserID = authUser.ID
 	comment.PostID = postID
 	comment.User = authUser
 	comment.Mine = true
+
 	// TODO: broadcast and notify
-	// Respond with created comment
+
 	respondJSON(w, comment, http.StatusCreated)
 }
 
@@ -81,7 +93,7 @@ func getComments(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	authUserID, authenticated := ctx.Value(keyAuthUserID).(string)
 	postID := chi.URLParam(r, "post_id")
-	// Build a query based on auth state
+
 	query := `
 		SELECT
 			comments.id,
@@ -108,13 +120,14 @@ func getComments(w http.ResponseWriter, r *http.Request) {
 	query += `
 		WHERE comments.post_id = $1
 		ORDER BY comments.created_at DESC`
+
 	rows, err := db.QueryContext(ctx, query, args...)
 	if err != nil {
 		respondError(w, fmt.Errorf("could not query comments: %v", err))
 		return
 	}
 	defer rows.Close()
-	// Scan each row
+
 	comments := make([]Comment, 0)
 	for rows.Next() {
 		var user User
@@ -133,10 +146,12 @@ func getComments(w http.ResponseWriter, r *http.Request) {
 				&comment.Liked,
 			)
 		}
+
 		if err = rows.Scan(dest...); err != nil {
 			respondError(w, fmt.Errorf("could not scan comment: %v", err))
 			return
 		}
+
 		comment.User = user
 		comments = append(comments, comment)
 	}
@@ -144,7 +159,7 @@ func getComments(w http.ResponseWriter, r *http.Request) {
 		respondError(w, fmt.Errorf("could not iterate over comments: %v", err))
 		return
 	}
-	// Respond with array of comments
+
 	respondJSON(w, comments, http.StatusOK)
 }
 
@@ -152,17 +167,17 @@ func toggleCommentLike(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	authUserID := ctx.Value(keyAuthUserID).(string)
 	commentID := chi.URLParam(r, "comment_id")
+
 	var liked bool
 	var likesCount int
 	if err := crdb.ExecuteTx(ctx, db, nil, func(tx *sql.Tx) error {
-		// Check if liked
 		if err := tx.QueryRow(`SELECT EXISTS (
 			SELECT 1 FROM comment_likes
 			WHERE user_id = $1 AND comment_id = $2
 		)`, authUserID, commentID).Scan(&liked); err != nil {
 			return err
 		}
-		// If so, delete like and decrement comment's likes_count
+
 		if liked {
 			if _, err := tx.Exec(`
 				DELETE FROM comment_likes
@@ -171,19 +186,21 @@ func toggleCommentLike(w http.ResponseWriter, r *http.Request) {
 			`, authUserID, commentID); err != nil {
 				return err
 			}
+
 			return tx.QueryRow(`
 				UPDATE comments SET likes_count = likes_count - 1
 				WHERE id = $1
 				RETURNING likes_count
 			`, commentID).Scan(&likesCount)
 		}
-		// Else, insert like and increment comment's likes_count
+
 		if _, err := tx.Exec(`
 			INSERT INTO comment_likes (user_id, comment_id) VALUES ($1, $2)
 			RETURNING NOTHING
 		`, authUserID, commentID); err != nil {
 			return err
 		}
+
 		return tx.QueryRow(`
 			UPDATE comments SET likes_count = likes_count + 1
 			WHERE id = $1
@@ -193,7 +210,8 @@ func toggleCommentLike(w http.ResponseWriter, r *http.Request) {
 		respondError(w, fmt.Errorf("could not toggle comment like: %v", err))
 		return
 	}
+
 	liked = !liked
-	// Respond with results
+
 	respondJSON(w, ToggleCommentLikePayload{liked, likesCount}, http.StatusOK)
 }
