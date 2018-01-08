@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"time"
 
@@ -91,35 +90,6 @@ func createPost(w http.ResponseWriter, r *http.Request) {
 	go feedFanout(post)
 
 	respondJSON(w, feedItem, http.StatusCreated)
-}
-
-func feedFanout(post Post) {
-	post.Mine = false
-	post.Subscribed = false
-
-	rows, err := db.Query(`
-		INSERT INTO feed (user_id, post_id)
-		SELECT follower_id, $1 FROM follows WHERE following_id = $2
-		RETURNING id, user_id
-	`, post.ID, post.UserID)
-	if err != nil {
-		log.Printf("error on feed fanout query: %v\n", err)
-		return
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var feedItem FeedItem
-		if err = rows.Scan(&feedItem.ID, &feedItem.UserID); err != nil {
-			log.Printf("error scanning feed fanout: %v\n", err)
-			return
-		}
-		feedItem.Post = post
-		// TODO: broadcast feedItem
-	}
-	if err = rows.Err(); err != nil {
-		log.Printf("error iterating over feed fanout: %v\n", err)
-	}
 }
 
 // TODO: add pagination
