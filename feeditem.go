@@ -96,7 +96,7 @@ func feedFanout(post Post) {
 		RETURNING id, user_id
 	`, post.ID, post.UserID)
 	if err != nil {
-		log.Printf("error on feed fanout query: %v\n", err)
+		log.Printf("could not query feed fanout: %v\n", err)
 		return
 	}
 	defer rows.Close()
@@ -104,13 +104,13 @@ func feedFanout(post Post) {
 	for rows.Next() {
 		var feedItem FeedItem
 		if err = rows.Scan(&feedItem.ID, &feedItem.UserID); err != nil {
-			log.Printf("error scanning feed fanout: %v\n", err)
+			log.Printf("could not scan feed fanout: %v\n", err)
 			return
 		}
 		feedItem.Post = post
 		// TODO: broadcast feedItem
 	}
 	if err = rows.Err(); err != nil {
-		log.Printf("error iterating over feed fanout: %v\n", err)
+		log.Printf("could not iterate over feed fanout: %v\n", err)
 	}
 }
