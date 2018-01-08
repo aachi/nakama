@@ -88,6 +88,7 @@ func createUser(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, user, http.StatusCreated)
 }
 
+// TODO: add pagination
 func getUsers(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	authUserID, authenticated := ctx.Value(keyAuthUserID).(string)

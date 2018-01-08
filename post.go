@@ -122,6 +122,7 @@ func feedFanout(post Post) {
 	}
 }
 
+// TODO: add pagination
 func getPosts(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	authUserID, authenticated := ctx.Value(keyAuthUserID).(string)

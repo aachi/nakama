@@ -13,6 +13,7 @@ type FeedItem struct {
 	Post   Post   `json:"post"`
 }
 
+// TODO: add pagination
 func getFeed(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	authUserID := ctx.Value(keyAuthUserID).(string)

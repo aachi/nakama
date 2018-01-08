@@ -89,6 +89,7 @@ func createComment(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, comment, http.StatusCreated)
 }
 
+// TODO: add pagination
 func getComments(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	authUserID, authenticated := ctx.Value(keyAuthUserID).(string)
