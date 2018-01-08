@@ -27,13 +27,13 @@ export function likeable(button, resource) {
  * @param {string} username
  */
 export function followable(button, username) {
-    const followersLink = button.parentElement.parentElement.querySelector('.followers-count')
+    const followersEl = button.parentElement.parentElement.querySelector('.followers-count')
     button.addEventListener('click', () => {
         button.disabled = true
         http.post(`/api/users/${username}/toggle_follow`).then(payload => {
             button.textContent = followMsg(payload.followingOfMine)
-            if (followersLink !== null) {
-                followersLink.textContent = followersMsg(payload.followersCount)
+            if (followersEl !== null) {
+                followersEl.textContent = followersMsg(payload.followersCount)
             }
         }).catch(console.error).then(() => {
             button.disabled = false
