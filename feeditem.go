@@ -17,7 +17,6 @@ func getFeed(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	authUserID := ctx.Value(keyAuthUserID).(string)
 
-	// Get feed, joined with post and user
 	rows, err := db.QueryContext(ctx, `
 		SELECT
 			feed.id,
@@ -49,7 +48,7 @@ func getFeed(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer rows.Close()
-	// Scan each row
+
 	feed := make([]FeedItem, 0)
 	for rows.Next() {
 		var user User
@@ -72,6 +71,7 @@ func getFeed(w http.ResponseWriter, r *http.Request) {
 			respondError(w, fmt.Errorf("could not scan feed item: %v", err))
 			return
 		}
+
 		post.User = &user
 		feedItem.Post = post
 		feed = append(feed, feedItem)
@@ -80,6 +80,6 @@ func getFeed(w http.ResponseWriter, r *http.Request) {
 		respondError(w, fmt.Errorf("could not iterate over feed: %v", err))
 		return
 	}
-	// Respond with feed array
+
 	respondJSON(w, feed, http.StatusOK)
 }

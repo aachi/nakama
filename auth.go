@@ -40,18 +40,18 @@ func jwtKeyfunc(*jwt.Token) (interface{}, error) {
 	return jwtKey, nil
 }
 
-// insecure login
+// TODO: make it secure
 func login(w http.ResponseWriter, r *http.Request) {
-	// Decode request body
 	var input LoginInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	defer r.Body.Close()
+
 	email := input.Email
 	// TODO: validate input, passwordless
-	// Find user on the database with the given email
+
 	var user User
 	if err := db.QueryRowContext(r.Context(), `
 		SELECT id, username, avatar_url
@@ -70,7 +70,7 @@ func login(w http.ResponseWriter, r *http.Request) {
 		respondError(w, fmt.Errorf("could not query user to login: %v", err))
 		return
 	}
-	// Isuue a JWT
+
 	expiresAt := time.Now().Add(year) // One year
 	tokenString, err := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{
 		Subject:   user.ID,
@@ -80,7 +80,7 @@ func login(w http.ResponseWriter, r *http.Request) {
 		respondError(w, fmt.Errorf("could not generate JWT: %v", err))
 		return
 	}
-	// Respond with the JWT
+
 	http.SetCookie(w, &http.Cookie{
 		Name:    "jwt",
 		Value:   tokenString,
@@ -103,7 +103,6 @@ func logout(w http.ResponseWriter, r *http.Request) {
 
 func maybeAuthUserID(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Extract JWT from Header or Cookie
 		var tokenString string
 		if a := r.Header.Get("Authorization"); strings.HasPrefix(a, "Bearer ") {
 			tokenString = a[7:]
@@ -113,7 +112,7 @@ func maybeAuthUserID(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
-		// Parse and validate JWT
+
 		p := jwt.Parser{ValidMethods: []string{jwt.SigningMethodHS256.Name}}
 		token, err := p.ParseWithClaims(tokenString, &jwt.StandardClaims{}, jwtKeyfunc)
 		if err != nil {
@@ -122,6 +121,7 @@ func maybeAuthUserID(next http.Handler) http.Handler {
 				http.StatusUnauthorized)
 			return
 		}
+
 		claims, ok := token.Claims.(*jwt.StandardClaims)
 		if !ok || !token.Valid {
 			http.Error(w,
@@ -129,18 +129,19 @@ func maybeAuthUserID(next http.Handler) http.Handler {
 				http.StatusUnauthorized)
 			return
 		}
-		// Set the auth user ID in the request context
+
 		authUserID := claims.Subject
 		ctx := r.Context()
 		ctx = context.WithValue(ctx, keyAuthUserID, authUserID)
+
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
 func mustAuthUser(next http.Handler) http.Handler {
 	return maybeAuthUserID(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Check if authenticated
 		ctx := r.Context()
+
 		authUserID, authenticated := ctx.Value(keyAuthUserID).(string)
 		if !authenticated {
 			http.Error(w,
@@ -148,12 +149,10 @@ func mustAuthUser(next http.Handler) http.Handler {
 				http.StatusUnauthorized)
 			return
 		}
-		// Find the user on the db
+
 		var authUser User
-		if err := db.QueryRowContext(ctx, queryGetUser, authUserID).Scan(
-			&authUser.Username,
-			&authUser.AvatarURL,
-		); err == sql.ErrNoRows {
+		if err := db.QueryRowContext(ctx, "SELECT username, avatar_url FROM users WHERE id = $1", authUserID).
+			Scan(&authUser.Username, &authUser.AvatarURL); err == sql.ErrNoRows {
 			http.Error(w,
 				http.StatusText(http.StatusTeapot),
 				http.StatusTeapot)
@@ -162,9 +161,10 @@ func mustAuthUser(next http.Handler) http.Handler {
 			respondError(w, fmt.Errorf("could not query authenticated user: %v", err))
 			return
 		}
+
 		authUser.ID = authUserID
-		// Put the auth user in the request context
 		ctx = context.WithValue(ctx, keyAuthUser, authUser)
+
 		next.ServeHTTP(w, r.WithContext(ctx))
 	}))
 }

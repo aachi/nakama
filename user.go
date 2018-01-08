@@ -46,22 +46,20 @@ type ToggleFollowPayload struct {
 	FollowersCount  int  `json:"followersCount"`
 }
 
-const queryGetUser = "SELECT username, avatar_url FROM users WHERE id = $1"
-
 var errFollowingMyself = errors.New("Try following someone else")
 
 func createUser(w http.ResponseWriter, r *http.Request) {
-	// Decode request body
 	var input CreateUserInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	defer r.Body.Close()
+
 	email := input.Email
 	username := input.Username
 	// TODO: validate input
-	// Insert the user into the db
+
 	var user Profile
 	err := db.QueryRowContext(r.Context(), `
 		INSERT INTO users (email, username) VALUES ($1, $2)
@@ -82,10 +80,11 @@ func createUser(w http.ResponseWriter, r *http.Request) {
 		respondError(w, fmt.Errorf("could not create user: %v", err))
 		return
 	}
+
 	user.Email = email
 	user.Username = username
 	user.Me = true
-	// Respond with the created user
+
 	respondJSON(w, user, http.StatusCreated)
 }
 
@@ -93,12 +92,12 @@ func getUsers(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	authUserID, authenticated := ctx.Value(keyAuthUserID).(string)
 	username := strings.TrimSpace(r.URL.Query().Get("username"))
-	// Validate non empty username query parameter
+
 	if username == "" {
 		http.Error(w, "Username required", http.StatusUnprocessableEntity)
 		return
 	}
-	// Build query based on auth state, exclude myself from results
+
 	query := `
 		SELECT
 			users.username,
@@ -109,8 +108,8 @@ func getUsers(w http.ResponseWriter, r *http.Request) {
 	args := []interface{}{username}
 	if authenticated {
 		query += `,
-			followers.follower_id IS NOT NULL AS follower_of_mine,
-			following.following_id IS NOT NULL AS following_of_mine`
+			following.following_id IS NOT NULL AS follower_of_mine,
+			followers.follower_id IS NOT NULL AS following_of_mine`
 		args = append(args, authUserID)
 	}
 	query += `
@@ -130,14 +129,14 @@ func getUsers(w http.ResponseWriter, r *http.Request) {
 	}
 	query += ` users.username ILIKE '%' || $1 || '%'
 		ORDER BY users.username`
-	// Fetch users
+
 	rows, err := db.QueryContext(ctx, query, args...)
 	if err != nil {
 		respondError(w, fmt.Errorf("could not query users: %v", err))
 		return
 	}
 	defer rows.Close()
-	// Scan each user
+
 	users := make([]Profile, 0)
 	for rows.Next() {
 		var user Profile
@@ -154,17 +153,19 @@ func getUsers(w http.ResponseWriter, r *http.Request) {
 				&user.FollowingOfMine,
 			)
 		}
+
 		if err = rows.Scan(dest...); err != nil {
 			respondError(w, fmt.Errorf("could not scan user: %v", err))
 			return
 		}
+
 		users = append(users, user)
 	}
 	if err = rows.Err(); err != nil {
 		respondError(w, fmt.Errorf("could not iterate over users: %v", err))
 		return
 	}
-	// Respond with users array
+
 	respondJSON(w, users, http.StatusOK)
 }
 
@@ -172,7 +173,7 @@ func getUser(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	authUserID, authenticated := ctx.Value(keyAuthUserID).(string)
 	username := chi.URLParam(r, "username")
-	// Find user on the database
+
 	query := `
 		SELECT
 			id,
@@ -215,6 +216,7 @@ func getUser(w http.ResponseWriter, r *http.Request) {
 			&user.FollowingOfMine,
 		)
 	}
+
 	if err := db.QueryRowContext(ctx, query, args...).Scan(dest...); err == sql.ErrNoRows {
 		http.Error(w,
 			http.StatusText(http.StatusNotFound),
@@ -225,14 +227,12 @@ func getUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Hide details when the account isn't mine
 	if !authenticated || authUserID != userID {
 		user.Email = ""
 	}
 	user.Username = username
 	user.Me = authenticated && userID == authUserID
 
-	// Respond with the found user profile
 	respondJSON(w, user, http.StatusOK)
 }
 
@@ -244,17 +244,16 @@ func toggleFollow(w http.ResponseWriter, r *http.Request) {
 	var followingOfMine bool
 	var followersCount int
 	if err := crdb.ExecuteTx(ctx, db, nil, func(tx *sql.Tx) error {
-		// Extract ID from username
 		var userID string
 		if err := tx.QueryRow("SELECT id FROM users WHERE username = $1", username).
 			Scan(&userID); err != nil {
 			return err
 		}
-		// Early return if trying to follow myself
+
 		if authUserID == userID {
 			return errFollowingMyself
 		}
-		// Check if already following
+
 		if err := tx.QueryRow(`SELECT EXISTS (
 			SELECT 1 FROM follows
 			WHERE follower_id = $1
@@ -262,8 +261,7 @@ func toggleFollow(w http.ResponseWriter, r *http.Request) {
 		)`, authUserID, userID).Scan(&followingOfMine); err != nil {
 			return err
 		}
-		// If following, delete follow, decrement follower's following_count
-		// and decrement user's followers_count
+
 		if followingOfMine {
 			if _, err := tx.Exec(`
 				DELETE FROM follows
@@ -273,6 +271,7 @@ func toggleFollow(w http.ResponseWriter, r *http.Request) {
 			`, authUserID, userID); err != nil {
 				return err
 			}
+
 			if _, err := tx.Exec(`
 				UPDATE users SET following_count = following_count - 1
 				WHERE id = $1
@@ -280,6 +279,7 @@ func toggleFollow(w http.ResponseWriter, r *http.Request) {
 			`, authUserID); err != nil {
 				return err
 			}
+
 			return tx.QueryRow(`
 				UPDATE users SET followers_count = followers_count - 1
 				WHERE id = $1
@@ -287,8 +287,6 @@ func toggleFollow(w http.ResponseWriter, r *http.Request) {
 			`, userID).Scan(&followersCount)
 		}
 
-		// Else insert follow, increment follower's following_count
-		// and increment user's followers_count
 		if _, err := tx.Exec(`
 			INSERT INTO follows (follower_id, following_id)
 			VALUES ($1, $2)
@@ -296,6 +294,7 @@ func toggleFollow(w http.ResponseWriter, r *http.Request) {
 		`, authUserID, userID); err != nil {
 			return err
 		}
+
 		if _, err := tx.Exec(`
 			UPDATE users SET following_count = following_count + 1
 			WHERE id = $1
@@ -303,6 +302,7 @@ func toggleFollow(w http.ResponseWriter, r *http.Request) {
 		`, authUserID); err != nil {
 			return err
 		}
+
 		return tx.QueryRow(`
 			UPDATE users SET followers_count = followers_count + 1
 			WHERE id = $1
@@ -319,6 +319,6 @@ func toggleFollow(w http.ResponseWriter, r *http.Request) {
 	}
 
 	followingOfMine = !followingOfMine
-	// TODO: Send notification
+
 	respondJSON(w, ToggleFollowPayload{followingOfMine, followersCount}, http.StatusOK)
 }
