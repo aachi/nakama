@@ -52,6 +52,7 @@ export default function (postId) {
     const commentTextArea = commentForm.querySelector('textarea')
     const commentButton = commentForm.querySelector('button')
     let commentsCountSpan = /** @type {HTMLSpanElement} */ (null)
+    let subscribeButton = /** @type {HTMLButtonElement} */ (null)
 
     Promise.all([
         http.get('/api/posts/' + postId),
@@ -86,7 +87,7 @@ export default function (postId) {
         if (authenticated) {
             likeable(postDiv.querySelector('.likes-count'), `posts/${post.id}`)
 
-            const subscribeButton = /** @type {HTMLButtonElement} */ (postDiv.querySelector('#subscribe'))
+            subscribeButton = postDiv.querySelector('#subscribe')
             subscribeButton.addEventListener('click', () => {
                 subscribeButton.disabled = true
                 http.post(`/api/posts/${post.id}/toggle_subscription`).then(subscribed => {
@@ -128,6 +129,9 @@ export default function (postId) {
                 if (commentsCountSpan !== null) {
                     const oldCount = parseInt(commentsCountSpan.textContent, 10)
                     commentsCountSpan.textContent = String(oldCount + 1)
+                }
+                if (subscribeButton !== null) {
+                    subscribeButton.textContent = subscribeMsg(true)
                 }
             }).catch(err => {
                 console.error(err)
