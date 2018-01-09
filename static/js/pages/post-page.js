@@ -31,7 +31,7 @@ function createCommentArticle(comment) {
         </header>
         <p>${content}</p>
         <div>
-            <${authenticated ? 'button' : 'span'} class="likes-count${comment.liked ? ' liked' : ''}" title="${likesMsg(comment.likesCount)}">${comment.likesCount}</${authenticated ? 'button' : 'span'}>
+            <${authenticated ? 'button role="switch"' : 'span'} class="likes-count${comment.liked ? ' liked' : ''}" aria-label="${likesMsg(comment.likesCount)}"${authenticated ? ` aria-checked="${comment.liked}"` : ''}>${comment.likesCount}</${authenticated ? 'button' : 'span'}>
         </div>
     `
 
@@ -73,7 +73,7 @@ export default function (postId) {
                 </header>
                 <p>${content}</p>
                 <div>
-                    <${authenticated ? 'button' : 'span'} class="likes-count${post.liked ? ' liked' : ''}" title="${likesMsg(post.likesCount)}">${post.likesCount}</${authenticated ? 'button' : 'span'}>
+                    <${authenticated ? 'button role="switch"' : 'span'} class="likes-count${post.liked ? ' liked' : ''}" aria-label="${likesMsg(post.likesCount)}"${authenticated ? ` aria-checked="${post.liked}"` : ''}>${post.likesCount}</${authenticated ? 'button' : 'span'}>
                     <span class="comments-count" title="${commentsMsg(post.commentsCount)}">${post.commentsCount}</span>
                     ${authenticated ? `
                         <button id="subscribe">${subscribeMsg(post.subscribed)}</button>

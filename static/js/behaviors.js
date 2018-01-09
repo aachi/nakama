@@ -13,7 +13,8 @@ export function likeable(button, resource) {
         http.post(`/api/${resource}/toggle_like`).then(payload => {
             button.textContent = String(payload.likesCount)
             button.classList[payload.liked ? 'add' : 'remove']('liked')
-            button.title = likesMsg(payload.likesCount)
+            button.setAttribute('aria-label', likesMsg(payload.likesCount))
+            button.setAttribute('aria-checked', String(payload.liked))
         }).catch(console.error).then(() => {
             button.disabled = false
         })

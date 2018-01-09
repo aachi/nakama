@@ -25,7 +25,7 @@ function createPostArticle(post) {
         </header>
         <p>${content}</p>
         <div>
-            <${authenticated ? 'button' : 'span'} class="likes-count${post.liked ? ' liked' : ''}" title="${likesMsg(post.likesCount)}">${post.likesCount}</${authenticated ? 'button' : 'span'}>
+            <${authenticated ? 'button role="switch"' : 'span'} class="likes-count${post.liked ? ' liked' : ''}" aria-label="${likesMsg(post.likesCount)}"${authenticated ? ` aria-checked="${post.liked}"` : ''}>${post.likesCount}</${authenticated ? 'button' : 'span'}>
             <a class="comments-count" href="/posts/${post.id}" title="${commentsMsg(post.commentsCount)}">${post.commentsCount}</a>
         </div>
     `)

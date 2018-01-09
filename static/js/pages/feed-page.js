@@ -45,7 +45,7 @@ function createFeedItemArticle(feedItem) {
         </header>
         <p style="white-space: pre">${content}</p>
         <div>
-            <button class="likes-count${post.liked ? ' liked' : ''}" title="${likesMsg(post.likesCount)}">${post.likesCount}</button>
+            <button role="switch" class="likes-count${post.liked ? ' liked' : ''}" aria-label="${likesMsg(post.likesCount)}" aria-checked="${post.liked}">${post.likesCount}</button>
             <a class="comments-count" href="/posts/${post.id}" title="${commentsMsg(post.commentsCount)}">${post.commentsCount}</a>
         </div>
     `)
