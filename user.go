@@ -239,19 +239,19 @@ func getUser(w http.ResponseWriter, r *http.Request) {
 
 func toggleFollow(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	authUserID := ctx.Value(keyAuthUserID).(string)
+	authUser := ctx.Value(keyAuthUser).(User)
 	username := chi.URLParam(r, "username")
 
+	var userID string
 	var followingOfMine bool
 	var followersCount int
 	if err := crdb.ExecuteTx(ctx, db, nil, func(tx *sql.Tx) error {
-		var userID string
 		if err := tx.QueryRow("SELECT id FROM users WHERE username = $1", username).
 			Scan(&userID); err != nil {
 			return err
 		}
 
-		if authUserID == userID {
+		if authUser.ID == userID {
 			return errFollowingMyself
 		}
 
@@ -259,7 +259,7 @@ func toggleFollow(w http.ResponseWriter, r *http.Request) {
 			SELECT 1 FROM follows
 			WHERE follower_id = $1
 				AND following_id = $2
-		)`, authUserID, userID).Scan(&followingOfMine); err != nil {
+		)`, authUser.ID, userID).Scan(&followingOfMine); err != nil {
 			return err
 		}
 
@@ -269,7 +269,7 @@ func toggleFollow(w http.ResponseWriter, r *http.Request) {
 				WHERE follower_id = $1
 					AND following_id = $2
 				RETURNING NOTHING
-			`, authUserID, userID); err != nil {
+			`, authUser.ID, userID); err != nil {
 				return err
 			}
 
@@ -277,7 +277,7 @@ func toggleFollow(w http.ResponseWriter, r *http.Request) {
 				UPDATE users SET following_count = following_count - 1
 				WHERE id = $1
 				RETURNING NOTHING
-			`, authUserID); err != nil {
+			`, authUser.ID); err != nil {
 				return err
 			}
 
@@ -292,7 +292,7 @@ func toggleFollow(w http.ResponseWriter, r *http.Request) {
 			INSERT INTO follows (follower_id, following_id)
 			VALUES ($1, $2)
 			RETURNING NOTHING
-		`, authUserID, userID); err != nil {
+		`, authUser.ID, userID); err != nil {
 			return err
 		}
 
@@ -300,7 +300,7 @@ func toggleFollow(w http.ResponseWriter, r *http.Request) {
 			UPDATE users SET following_count = following_count + 1
 			WHERE id = $1
 			RETURNING NOTHING
-		`, authUserID); err != nil {
+		`, authUser.ID); err != nil {
 			return err
 		}
 
@@ -320,6 +320,10 @@ func toggleFollow(w http.ResponseWriter, r *http.Request) {
 	}
 
 	followingOfMine = !followingOfMine
+
+	if followingOfMine {
+		go createFollowNotification(authUser, userID)
+	}
 
 	respondJSON(w, ToggleFollowPayload{followingOfMine, followersCount}, http.StatusOK)
 }

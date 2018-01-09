@@ -63,6 +63,18 @@ CREATE TABLE IF NOT EXISTS comment_likes (
     PRIMARY KEY (user_id, comment_id)
 );
 
+CREATE TABLE IF NOT EXISTS notifications (
+    id SERIAL NOT NULL PRIMARY KEY,
+    user_id INT NOT NULL REFERENCES users,
+    actor_id INT NOT NULL REFERENCES users,
+    verb STRING NOT NULL,
+    object_id INT,
+    target_id INT,
+    issued_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    read BOOL NOT NULL DEFAULT false,
+    INDEX (issued_at DESC)
+);
+
 INSERT INTO users (id, email, username) VALUES
     (1, 'john@example.dev', 'john_doe'),
     (2, 'jane@example.dev', 'jane_doe');
