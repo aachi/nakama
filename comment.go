@@ -84,7 +84,9 @@ func createComment(w http.ResponseWriter, r *http.Request) {
 	comment.User = authUser
 	comment.Mine = true
 
-	// TODO: broadcast and notify
+	// TODO: broadcast
+
+	go commentNotificationFanout(comment)
 
 	respondJSON(w, comment, http.StatusCreated)
 }
