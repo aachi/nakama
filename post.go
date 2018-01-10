@@ -88,6 +88,7 @@ func createPost(w http.ResponseWriter, r *http.Request) {
 	feedItem.Post = post
 
 	go feedFanout(post)
+	go postMentionNotificationFanout(post)
 
 	respondJSON(w, feedItem, http.StatusCreated)
 }

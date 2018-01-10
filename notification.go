@@ -4,9 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/cockroachdb/cockroach-go/crdb"
+	"github.com/gernest/mention"
+	"github.com/lib/pq"
 )
 
 // Notification model
@@ -97,5 +100,92 @@ func commentNotificationFanout(comment Comment) {
 
 	if err = rows.Err(); err != nil {
 		log.Printf("could not iterate over comment notification fanout: %v\n", err)
+	}
+}
+
+func collectMentions(content string) []string {
+	return mention.GetTags('@', strings.NewReader(content), ',', '.', '!', '?', '"', ')')
+}
+
+func postMentionNotificationFanout(post Post) {
+	usernames := collectMentions(post.Content)
+	rows, err := db.Query(`
+		INSERT INTO notifications (user_id, actor_id, verb, object_id)
+		SELECT id, $1, 'post_mention', $2
+		FROM users
+		WHERE id != $1
+			AND username = ANY($3)
+		RETURNING id, user_id, issued_at
+	`, post.UserID, post.ID, pq.Array(usernames))
+	if err != nil {
+		log.Printf("could not query post mention notification fanout: %v\n", err)
+		return
+	}
+	defer rows.Err()
+
+	for rows.Next() {
+		var notification Notification
+		if err = rows.Scan(
+			&notification.ID,
+			&notification.UserID,
+			&notification.IssuedAt,
+		); err != nil {
+			log.Printf("could not scan post mention notification fanout: %v\n", err)
+			return
+		}
+
+		notification.ActorID = post.UserID
+		notification.Verb = "post_mention"
+		notification.ObjectID = &post.ID
+		notification.ActorUsername = post.User.Username
+
+		// TODO: broadcast
+		log.Printf("post mention notification created: %v\n", notification)
+	}
+
+	if err = rows.Err(); err != nil {
+		log.Printf("could not iterate over post mention notification fanout: %v\n", err)
+	}
+}
+
+func commentMentionNotificationFanout(comment Comment) {
+	usernames := collectMentions(comment.Content)
+	rows, err := db.Query(`
+		INSERT INTO notifications (user_id, actor_id, verb, object_id, target_id)
+		SELECT id, $1, 'comment_mention', $2, $3
+		FROM users
+		WHERE id != $1
+			AND username = ANY($4)
+		RETURNING id, user_id, issued_at
+	`, comment.UserID, comment.ID, comment.PostID, pq.Array(usernames))
+	if err != nil {
+		log.Printf("could not query comment mention notification fanout: %v\n", err)
+		return
+	}
+	defer rows.Err()
+
+	for rows.Next() {
+		var notification Notification
+		if err = rows.Scan(
+			&notification.ID,
+			&notification.UserID,
+			&notification.IssuedAt,
+		); err != nil {
+			log.Printf("could not scan comment mention notification fanout: %v\n", err)
+			return
+		}
+
+		notification.ActorID = comment.UserID
+		notification.Verb = "comment_mention"
+		notification.ObjectID = &comment.ID
+		notification.TargetID = &comment.PostID
+		notification.ActorUsername = comment.User.Username
+
+		// TODO: broadcast
+		log.Printf("comment mention notification created: %v\n", notification)
+	}
+
+	if err = rows.Err(); err != nil {
+		log.Printf("could not iterate over comment mention notification fanout: %v\n", err)
 	}
 }

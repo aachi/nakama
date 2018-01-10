@@ -86,6 +86,7 @@ func createComment(w http.ResponseWriter, r *http.Request) {
 
 	// TODO: broadcast
 
+	go commentMentionNotificationFanout(comment)
 	go commentNotificationFanout(comment)
 
 	respondJSON(w, comment, http.StatusCreated)
