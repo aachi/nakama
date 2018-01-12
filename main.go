@@ -48,6 +48,9 @@ func main() {
 		api.With(mustAuthUser).Post("/posts/{post_id}/toggle_like", togglePostLike)
 		api.With(mustAuthUser).Post("/posts/{post_id}/toggle_subscription", toggleSubscription)
 		api.With(mustAuthUser).Post("/comments/{comment_id}/toggle_like", toggleCommentLike)
+		api.With(mustAuthUser).Get("/notifications", getNotifications)
+		api.With(mustAuthUser).Post("/notifications/{notification_id}/read", readNotification)
+		api.With(mustAuthUser).Get("/check_notifications_seen", checkNotificationsSeen)
 	})
 	mux.Group(func(mux chi.Router) {
 		// TODO: remove no cache

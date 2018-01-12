@@ -9,7 +9,8 @@ CREATE TABLE IF NOT EXISTS users (
     avatar_url STRING,
     followers_count INT NOT NULL CHECK (followers_count >= 0) DEFAULT 0,
     following_count INT NOT NULL CHECK (following_count >= 0) DEFAULT 0,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    notifications_seen_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS follows (
