@@ -56,7 +56,7 @@ a:not([class]):hover {
     text-decoration: underline;
 }
 
-.js-focus-ring :focus:not(.focus-ring) {
+.js-focus-visible :focus:not(.focus-visible) {
     outline: 0;
 }
 
