@@ -15,7 +15,7 @@ go get -u github.com/gernest/mention
 Start the database and create the schema:
 ```bash
 cockroach start --insecure --host 127.0.0.1
-cat schema.sql | cockroach sql --insecure --format "pretty"
+cat schema.sql | cockroach sql --insecure
 ```
 
 Build and run:
