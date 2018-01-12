@@ -9,6 +9,7 @@ go get -u github.com/lib/pq
 go get -u github.com/go-chi/chi
 go get -u github.com/dgrijalva/jwt-go
 go get -u github.com/cockroachdb/cockroach-go/crdb
+go get -u github.com/gernest/mention
 ```
 
 Start the database and create the schema:
