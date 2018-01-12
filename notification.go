@@ -109,6 +109,22 @@ func readNotification(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+func readNotifications(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	authUserID := ctx.Value(keyAuthUserID).(string)
+
+	if _, err := db.ExecContext(ctx, `
+		UPDATE notifications SET
+			read = true
+		WHERE user_id = $1
+	`, authUserID); err != nil {
+		respondError(w, fmt.Errorf("could not read notifications: %v", err))
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func checkNotificationsSeen(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	authUserID := ctx.Value(keyAuthUserID).(string)

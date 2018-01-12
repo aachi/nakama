@@ -51,6 +51,7 @@ func main() {
 		api.With(mustAuthUser).Get("/notifications", getNotifications)
 		api.With(mustAuthUser).Post("/notifications/{notification_id}/read", readNotification)
 		api.With(mustAuthUser).Get("/check_notifications_seen", checkNotificationsSeen)
+		api.With(mustAuthUser).Post("/read_notifications", readNotifications)
 	})
 	mux.Group(func(mux chi.Router) {
 		// TODO: remove no cache
