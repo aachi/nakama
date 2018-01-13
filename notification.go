@@ -138,7 +138,7 @@ func checkNotificationsSeen(w http.ResponseWriter, r *http.Request) {
 		ORDER BY notifications.issued_at DESC
 		LIMIT 1
 	`, authUserID).Scan(&seen); err != nil && err != sql.ErrNoRows {
-		respondError(w, fmt.Errorf("could not check notifications seen: %v", w))
+		respondError(w, fmt.Errorf("could not check notifications seen: %v", err))
 		return
 	} else if err == sql.ErrNoRows {
 		seen = true
