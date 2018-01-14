@@ -79,12 +79,21 @@ CREATE TABLE IF NOT EXISTS notifications (
 INSERT INTO users (id, email, username) VALUES
     (1, 'john@example.dev', 'john_doe'),
     (2, 'jane@example.dev', 'jane_doe');
+INSERT INTO follows (follower_id, following_id) VALUES
+    (2, 1);
+UPDATE users SET following_count = following_count + 1 WHERE id = 2;
+UPDATE users SET followers_count = followers_count + 1 WHERE id = 1;
+INSERT INTO notifications (id, user_id, actor_id, verb) VALUES
+    (1, 1, 2, 'follow');
 
-INSERT INTO posts (id, content, spoiler_of, comments_count, user_id) VALUES
-    (1, '1st post', NULL, 1, 1);
+INSERT INTO posts (id, content, user_id) VALUES
+    (1, '1st post', 1);
 INSERT INTO subscriptions (user_id, post_id) VALUES
     (1, 1);
 INSERT INTO feed (id, user_id, post_id) VALUES
-    (1, 1, 1);
+    (1, 1, 1),
+    (2, 2, 1);
+
 INSERT INTO comments (id, content, user_id, post_id) VALUES
-    (1, '1st comment on 1st post', 1, 1);
+    (1, '1st comment', 1, 1);
+UPDATE posts SET comments_count = comments_count + 1 WHERE id = 1;
