@@ -25,3 +25,9 @@ go build
 ```
 
 `main.go` contains the route definitions; check those.
+
+curl -H "Content-Type: application/json" -X POST -d '{"email":"john@example.dev"}' http://localhost:8081/api/login | jq '.'
+
+curl http://localhost:8081/api/posts/1 -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE1NDc1NjYzNTAsInN1YiI6IjEifQ.dadQ_QZqMQ03f62hxbo4nkKD_kyJ_SU1C7Md6u9O26o'
+
+
