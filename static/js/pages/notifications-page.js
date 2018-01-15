@@ -54,7 +54,7 @@ export default function () {
         notifications.forEach(notification => {
             notificationsDiv.appendChild(createNotificationLink(notification))
         })
-    })
+    }).catch(console.error)
 
     return page
 }

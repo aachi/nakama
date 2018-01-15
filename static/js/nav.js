@@ -19,5 +19,5 @@ if (authenticated && location.pathname !== '/notifications') {
         if (unread) {
             nav.querySelector('#notifications-link').classList.add('unread')
         }
-    })
+    }).catch(console.error)
 }

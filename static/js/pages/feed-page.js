@@ -131,7 +131,7 @@ export default function () {
         feed.forEach(feedItem => {
             feedDiv.appendChild(createFeedItemArticle(feedItem))
         })
-    })
+    }).catch(console.error)
 
     return page
 }
