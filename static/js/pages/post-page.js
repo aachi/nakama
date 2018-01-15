@@ -21,6 +21,8 @@ function createCommentArticle(comment) {
     const content = linkify(escapeHTML(comment.content))
 
     const article = document.createElement('article')
+    article.id = 'comment-' + comment.id
+    article.className = 'comment'
     article.innerHTML = `
         <header>
             <a href="/users/${user.username}">
@@ -101,6 +103,14 @@ export default function (postId) {
         comments.forEach(comment => {
             commentsDiv.insertBefore(createCommentArticle(comment), commentsDiv.firstChild)
         })
+
+        const commentId = location.hash
+        if (commentId.startsWith('#comment-')) {
+            const commentEl = commentsDiv.querySelector(commentId)
+            if (commentEl !== null) {
+                commentEl.scrollIntoView()
+            }
+        }
     }).catch(err => {
         console.error(err)
         if (err.statusCode === 404) {
