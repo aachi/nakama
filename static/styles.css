@@ -153,16 +153,33 @@ figure.avatar::after {
 }
 
 .notification {
+    color: inherit;
     display: flex;
     justify-content: space-between;
-    background-color: #eee;
-    border-radius: 1rem;
+    background-color: black;
+    color: white;
     padding: 1rem;
     margin-top: 1rem;
 }
 
 .notification.read {
-    opacity: .5;
+    background-color: #eee;
+    color: black;
+    text-decoration: line-through;
+}
+
+.unread {
+    position: relative;
+}
+
+.unread::after {
+    content: '';
+    position: absolute;
+    top: .15rem;
+    width: .5rem;
+    height: .5rem;
+    border-radius: 50%;
+    background-color: turquoise;
 }
 
 .profile-warpper .user-stats {
@@ -199,4 +216,9 @@ figure.avatar::after {
 
 .user .user-stats span {
     display: block;
+}
+
+.comment .avatar {
+    width: 2rem;
+    height: 2rem;
 }

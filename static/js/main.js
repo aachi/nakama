@@ -43,6 +43,7 @@ const router = routes => pathname => {
 const route = router([
     ['/', authenticated ? genPage('feed') : genPage('welcome')],
     ['/search', genPage('search')],
+    ['/notifications', genPage('notifications')],
     [/^\/users\/([^\/]+)$/, genPage('user')],
     [/^\/posts\/([^\/]+)$/, genPage('post')],
     [/^\//, genPage('not-found')],
