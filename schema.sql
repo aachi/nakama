@@ -72,7 +72,6 @@ CREATE TABLE IF NOT EXISTS notifications (
     object_id INT,
     target_id INT,
     issued_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    read BOOL NOT NULL DEFAULT false,
     INDEX (issued_at DESC)
 );
 

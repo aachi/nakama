@@ -9,8 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-chi/chi"
-
 	"github.com/cockroachdb/cockroach-go/crdb"
 	"github.com/gernest/mention"
 	"github.com/lib/pq"
@@ -36,14 +34,15 @@ func getNotifications(w http.ResponseWriter, r *http.Request) {
 	rows, err := db.QueryContext(ctx, `
 		SELECT
 			notifications.id,
-			users.username,
+			actors.username,
 			notifications.verb,
 			notifications.object_id,
 			notifications.target_id,
 			notifications.issued_at,
-			notifications.read
+			notifications.issued_at <= users.notifications_seen_at AS read
 		FROM notifications
-		INNER JOIN users ON notifications.actor_id = users.id
+		INNER JOIN users AS actors ON notifications.actor_id = actors.id
+		INNER JOIN users ON notifications.user_id = users.id
 		WHERE notifications.user_id = $1
 		ORDER BY notifications.issued_at DESC
 	`, authUserID)
@@ -92,59 +91,24 @@ func updateNotificationsSeenAt(userID string) {
 	}
 }
 
-func readNotification(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	authUserID := ctx.Value(keyAuthUserID).(string)
-	notificationID := chi.URLParam(r, "notification_id")
-
-	if _, err := db.ExecContext(ctx, `
-		UPDATE notifications SET
-			read = true
-		WHERE id = $1 AND user_id = $2
-	`, notificationID, authUserID); err != nil {
-		respondError(w, fmt.Errorf("could not read notification: %v", err))
-		return
-	}
-
-	w.WriteHeader(http.StatusNoContent)
-}
-
-func readNotifications(w http.ResponseWriter, r *http.Request) {
+func checkUnreadNotifications(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	authUserID := ctx.Value(keyAuthUserID).(string)
 
-	if _, err := db.ExecContext(ctx, `
-		UPDATE notifications SET
-			read = true
-		WHERE user_id = $1
-	`, authUserID); err != nil {
-		respondError(w, fmt.Errorf("could not read notifications: %v", err))
-		return
-	}
-
-	w.WriteHeader(http.StatusNoContent)
-}
-
-func checkNotificationsSeen(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	authUserID := ctx.Value(keyAuthUserID).(string)
-
-	var seen bool
+	var unread bool
 	if err := db.QueryRowContext(ctx, `
-		SELECT notifications.issued_at <= users.notifications_seen_at AS seen
+		SELECT notifications.issued_at > users.notifications_seen_at AS unread
 		FROM notifications
 		INNER JOIN users ON notifications.user_id = users.id
-		WHERE notifications.user_id = $1 AND notifications.read = false
+		WHERE notifications.user_id = $1
 		ORDER BY notifications.issued_at DESC
 		LIMIT 1
-	`, authUserID).Scan(&seen); err != nil && err != sql.ErrNoRows {
-		respondError(w, fmt.Errorf("could not check notifications seen: %v", err))
+	`, authUserID).Scan(&unread); err != nil && err != sql.ErrNoRows {
+		respondError(w, fmt.Errorf("could not check unread notifications: %v", err))
 		return
-	} else if err == sql.ErrNoRows {
-		seen = true
 	}
 
-	respondJSON(w, seen, http.StatusOK)
+	respondJSON(w, unread, http.StatusOK)
 }
 
 func createFollowNotification(follower User, followingID string) {
